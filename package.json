@@ -4,6 +4,9 @@
   "description": "",
   "dependencies": {
     "async": "^2.1.4",
+    "extract-zip": "^1.6.0",
+    "recursive-readdir": "^2.1.0",
+    "request": "^2.79.0",
     "s3": "^4.4.0",
     "s3-cli": "^0.13.0"
   },
@@ -11,7 +14,7 @@
   "scripts": {
     "_clean": "rm -rf ./dist && rm -f ./bpho-lambda-deploy-site-from-github.zip",
     "_commit": "git rev-parse --verify HEAD >> dist/deployed_commit.txt",
-    "_copy": "cp -R ./node_modules ./src/* ./lib/* ./dist",
+    "_copy": "cp -R ./node_modules ./src/* ./dist",
     "_build": "npm run _clean && mkdir dist && npm run _copy && npm run _commit",
     "_zip": "cd dist && zip -r -X ../bpho-lambda-deploy-site-from-github.zip .",
     "_upload": "aws s3 cp ./bpho-lambda-deploy-site-from-github.zip s3://bpho-lambdas/bpho-lambda-deploy-site-from-github.zip --profile bpho",

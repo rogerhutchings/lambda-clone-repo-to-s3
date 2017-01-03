@@ -1,2 +1,2 @@
-dist
-bpho-lambda-compile-site.zip
+dist/
+*.zip
