@@ -24,28 +24,33 @@ function handleDeploy(message, dstBucket, context) {
 
   async.waterfall([
     function getZippedRepo(next) {
-      console.log('Fetching repo ', repo.html_url);
-      request(`${repo.html_url}/archive/master.zip`)
+      console.log('Fetching repo %s', repo.name);
+      var zipUrl = `${repo.html_url}/archive/master.zip`;
+      request(zipUrl)
         .pipe(fs.createWriteStream(zipLocation))
         .on('error', function(err) {
             console.error('Request failed with error: ' + err);
             next(err);
         })
         .on('close', function () {
+          console.log('Finished downloading %s', zipUrl);
           next(null);
         });
     },
     function unzipRepo(next) {
+      console.log('Unzipping %s to %s', zipLocation, unzippedLocation);
       extract(zipLocation, { dir: tmpDir }, function (err) {
         if (err) {
           console.error('Unzip failed with error: ' + err);
           next(err);
         }
+        console.log('Finished unzipping');
         next(null);
       });
 
     },
     function upload(next) {
+      console.log('Syncing %s to bucket %s', unzippedLocation, dstBucket);
       var params = {
         localDir: unzippedLocation,
         deleteRemoved: true,
@@ -55,11 +60,11 @@ function handleDeploy(message, dstBucket, context) {
       };
       var uploader = syncClient.uploadDir(params);
       uploader.on('error', function(err) {
-        console.error("unable to sync up:", err.stack);
+        console.error('Sync failed with error: ', err.stack);
         next(err);
       });
       uploader.on('end', function() {
-        console.log("done uploading");
+        console.log('Finished syncing to S3');
         next(null);
       });
     }
