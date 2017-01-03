@@ -1,0 +1,31 @@
+{
+  "name": "bpho-lambda-deploy-site-from-github",
+  "version": "0.0.1",
+  "description": "",
+  "dependencies": {
+    "async": "^2.1.4",
+    "s3": "^4.4.0",
+    "s3-cli": "^0.13.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "_clean": "rm -rf ./dist && rm -f ./bpho-lambda-deploy-site-from-github.zip",
+    "_commit": "git rev-parse --verify HEAD >> dist/deployed_commit.txt",
+    "_copy": "cp -R ./node_modules ./src/* ./lib/* ./dist",
+    "_build": "npm run _clean && mkdir dist && npm run _copy && npm run _commit",
+    "_zip": "cd dist && zip -r -X ../bpho-lambda-deploy-site-from-github.zip .",
+    "_upload": "aws s3 cp ./bpho-lambda-deploy-site-from-github.zip s3://bpho-lambdas/bpho-lambda-deploy-site-from-github.zip --profile bpho",
+    "_update": "aws lambda update-function-code --function-name BPhORunHugo --s3-bucket bpho-lambdas --s3-key bpho-lambda-deploy-site-from-github.zip --profile bpho",
+    "start": "npm run _build && npm run _zip && npm run _upload && npm run _update"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rogerhutchings/bpho-lambda-deploy-site-from-github.git"
+  },
+  "author": "Roger Hutchings <roger@hutchin.gs> (https://www.rogerhutchin.gs/)",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/rogerhutchings/bpho-lambda-deploy-site-from-github/issues"
+  },
+  "homepage": "https://github.com/rogerhutchings/bpho-lambda-deploy-site-from-github#readme"
+}
