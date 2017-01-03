@@ -19,14 +19,13 @@ var syncClient = s3.createClient({
 
 function handleDeploy(message, dstBucket, context) {
   var repo = message.repository;
-  var zipLocation = tmpDir + '/master.zip';
-  var uploadFiles = [];
-  var unzippedLocation = unzipDir + '/' + repo.name + '-master';
+  var zipLocation = `${tmpDir}/master.zip`;
+  var unzippedLocation = `${tmpDir}/${repo.name}-master`;
 
   async.waterfall([
     function getZippedRepo(next) {
       console.log('Fetching repo ', repo.html_url);
-      request(repo.html_url + '/archive/master.zip')
+      request(`${repo.html_url}/archive/master.zip`)
         .pipe(fs.createWriteStream(zipLocation))
         .on('error', function(err) {
             console.error('Request failed with error: ' + err);
