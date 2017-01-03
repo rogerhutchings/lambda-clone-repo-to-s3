@@ -7,37 +7,23 @@ var spawn = require('child_process').spawn;
 var fs = require('fs');
 var request = require('request');
 var extract = require('extract-zip')
-var recursive = require('recursive-readdir');
 var s3 = require('s3');
 
 var dstBucket = 'bpho-src';
 
-tmpDir = '/tmp/sources';
-unzipDir = tmpDir + '/master'
+tmpDir = '/tmp';
 
 var syncClient = s3.createClient({
     maxAsyncS3: 20,
 });
 
 function handleDeploy(message, dstBucket, context) {
-  // clone repo to local dir
-  // copy to s3
   var repo = message.repository;
   var zipLocation = tmpDir + '/master.zip';
   var uploadFiles = [];
+  var unzippedLocation = unzipDir + '/' + repo.name + '-master';
 
   async.waterfall([
-    function mkdir(next) {
-      var child = spawn('mkdir', ['-p', tmpDir, unzipDir], {});
-      child.on('error', function(err) {
-          console.error('Failed to create directory: ' + err);
-          next(err);
-      });
-      child.on('close', function(code) {
-          console.log('made dir: ' + code);
-          next(null);
-      });
-    },
     function getZippedRepo(next) {
       console.log('Fetching repo ', repo.html_url);
       request(repo.html_url + '/archive/master.zip')
@@ -51,7 +37,7 @@ function handleDeploy(message, dstBucket, context) {
         });
     },
     function unzipRepo(next) {
-      extract(zipLocation, { dir: unzipDir }, function (err) {
+      extract(zipLocation, { dir: tmpDir }, function (err) {
         if (err) {
           console.error('Unzip failed with error: ' + err);
           next(err);
@@ -60,17 +46,9 @@ function handleDeploy(message, dstBucket, context) {
       });
 
     },
-    function ls(next) {
-      var ignore = ['.keep', '.gitignore'];
-      recursive(unzipDir, ignore, function (err, files) {
-        console.info(files);
-        uploadFiles = files;
-        next(null);
-      });
-    },
     function upload(next) {
       var params = {
-        localDir: unzipDir,
+        localDir: unzippedLocation,
         deleteRemoved: true,
         s3Params: {
           Bucket: dstBucket,
@@ -86,7 +64,6 @@ function handleDeploy(message, dstBucket, context) {
         next(null);
       });
     }
-    
   ], function(error) {
       if (error) {
         console.error('Deploy failed due to: ' + error);
