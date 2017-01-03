@@ -15,7 +15,7 @@
     "_build": "npm run _clean && mkdir dist && npm run _copy && npm run _commit",
     "_zip": "cd dist && zip -r -X ../bpho-lambda-deploy-site-from-github.zip .",
     "_upload": "aws s3 cp ./bpho-lambda-deploy-site-from-github.zip s3://bpho-lambdas/bpho-lambda-deploy-site-from-github.zip --profile bpho",
-    "_update": "aws lambda update-function-code --function-name BPhORunHugo --s3-bucket bpho-lambdas --s3-key bpho-lambda-deploy-site-from-github.zip --profile bpho",
+    "_update": "aws lambda update-function-code --function-name BPhODeploySiteFromGitHub --s3-bucket bpho-lambdas --s3-key bpho-lambda-deploy-site-from-github.zip --profile bpho",
     "start": "npm run _build && npm run _zip && npm run _upload && npm run _update"
   },
   "repository": {
