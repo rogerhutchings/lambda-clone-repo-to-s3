@@ -39,7 +39,7 @@ function handleDeploy(message, dstBucket, context) {
     },
     function unzipRepo(next) {
       console.log('Unzipping %s to %s', zipLocation, unzippedLocation);
-      extract(zipLocation, { dir: tmpDir }, function (err) {
+      extract(zipLocation, { dir: tmpDir }, (err) => {
         if (err) {
           console.error('Unzip failed with error: ' + err);
           next(err);
@@ -51,19 +51,22 @@ function handleDeploy(message, dstBucket, context) {
     },
     function upload(next) {
       console.log('Syncing %s to bucket %s', unzippedLocation, dstBucket);
-      var params = {
+      var uploader = syncClient.uploadDir({
         localDir: unzippedLocation,
         deleteRemoved: true,
         s3Params: {
           Bucket: dstBucket,
         },
-      };
-      var uploader = syncClient.uploadDir(params);
-      uploader.on('error', function(err) {
+      });
+
+      uploader.on('fileUploadEnd', (localFilePath) => console.info('Uploaded %s', localFilePath));
+
+      uploader.on('error', (err) => {
         console.error('Sync failed with error: ', err.stack);
         next(err);
       });
-      uploader.on('end', function() {
+
+      uploader.on('end', () => {
         console.log('Finished syncing to S3');
         next(null);
       });
