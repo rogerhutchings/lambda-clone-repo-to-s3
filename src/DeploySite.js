@@ -43,6 +43,7 @@ function handleDeploy(message, dstBucket, context) {
         if (err) {
           console.error('Unzip failed with error: ' + err);
           next(err);
+          return;
         }
         console.log('Finished unzipping');
         next(null);
@@ -69,6 +70,24 @@ function handleDeploy(message, dstBucket, context) {
       uploader.on('end', () => {
         console.log('Finished syncing to S3');
         next(null);
+      });
+    },
+    function publishToSNS(next) {
+      console.log('Triggering rebuild via SNS');
+      var sns = new AWS.SNS({
+        region: 'eu-west-1',
+      });
+
+      sns.publish({
+        Message: 'Site updated from GitHub, start the rebuild!',
+        TopicArn: 'arn:aws:sns:eu-west-1:420685058923:BPhORebuildSite'
+      }, (err, data) => {
+        if (err) {
+          console.error(err.stack);
+          next(err);
+          return;
+        }
+        console.log('SNS rebuild notification published');
       });
     }
   ], function(error) {
