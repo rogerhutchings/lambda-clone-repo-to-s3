@@ -2,6 +2,7 @@ var webpack = require('webpack');
 var nodeExternals = require('webpack-node-externals');
 var execFileSync = require('child_process').execFileSync;
 var CopyWebpackPlugin = require('copy-webpack-plugin');
+var path = require('path');
 
 var packages = execFileSync('npm', ['ls', '--parseable', '--production'])
   .toString()

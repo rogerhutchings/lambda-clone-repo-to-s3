@@ -24,6 +24,17 @@ function handleDeploy(message, dstBucket, context) {
   const unzippedLocation = `${tmpDir}/${repo.name}-master`;
 
   waterfall([
+    function mkTempDir(next) {
+      const child = spawn('mkdir', ['-p', tmpDir], {});
+      child.on('error', (err) => {
+        console.log('Failed to create directory: %s', err);
+        next(err);
+      });
+      child.on('close', (code) => {
+        console.log('Created directory: %s, %s', tmpDir, code);
+        next(null);
+      });
+    },
     function getZippedRepo(next) {
       console.log('Fetching repo %s', repo.name);
       const zipUrl = `${repo.html_url}/archive/master.zip`;
