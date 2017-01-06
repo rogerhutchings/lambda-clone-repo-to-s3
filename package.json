@@ -6,7 +6,8 @@
     "async": "^2.1.4",
     "extract-zip": "^1.6.0",
     "request": "^2.79.0",
-    "s3": "^4.4.0"
+    "s3": "^4.4.0",
+    "uuid": "^3.0.1"
   },
   "devDependencies": {
     "babel-core": "^6.21.0",

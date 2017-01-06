@@ -8,10 +8,11 @@ import fs from 'fs'
 import request from 'request'
 import extract from 'extract-zip'
 import s3 from 's3'
+import uuidV4 from 'uuid/v4';
 
 const dstBucket = 'bpho-src';
 
-const tmpDir = '/tmp';
+const tmpDir = `/tmp/${uuidV4()}`;
 
 const syncClient = s3.createClient({
     maxAsyncS3: 20,
