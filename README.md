@@ -11,4 +11,8 @@ Based on https://github.com/ryansb/hugo-lambda, and http://bezdelev.com/post/hug
 
 ## Deploying
 
-- Run `npm start` to upload a zipped version of the lambda to S3, and update the `BPhORunHugo` function
+- Run `npm run deploy` to upload a zipped version of the lambda to S3, and update the `BPhORunHugo` function
+
+## Notes
+
+This uses webpack to compile and build, including the copying of dependencies into the zip bundle.

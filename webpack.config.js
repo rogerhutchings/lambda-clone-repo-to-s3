@@ -17,11 +17,13 @@ module.exports = {
   target: 'node',
   output: {
     filename: 'DeploySite.js',
-    path: './dist',
+    path: path.join(__dirname, 'dist'),
     library: "[name]",
     libraryTarget: "commonjs2",
   },
-  externals: [nodeExternals()],
+  externals: [
+    nodeExternals()
+  ],
   module: {
     loaders: [
       {
