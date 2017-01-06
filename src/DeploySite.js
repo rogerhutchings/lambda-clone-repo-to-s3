@@ -1,31 +1,31 @@
 // Sync the directories for non-content dirs ONLY
 // that way, we can clean up stuff left behind without pain
-var util = require('util');
-var AWS = require('aws-sdk');
-var async = require('async');
-var spawn = require('child_process').spawn;
-var fs = require('fs');
-var request = require('request');
-var extract = require('extract-zip')
-var s3 = require('s3');
+import util from 'util'
+import AWS from 'aws-sdk'
+import waterfall from 'async/waterfall'
+import {spawn} from 'child_process'
+import fs from 'fs'
+import request from 'request'
+import extract from 'extract-zip'
+import s3 from 's3'
 
-var dstBucket = 'bpho-src';
+const dstBucket = 'bpho-src';
 
-tmpDir = '/tmp';
+const tmpDir = '/tmp';
 
-var syncClient = s3.createClient({
+const syncClient = s3.createClient({
     maxAsyncS3: 20,
 });
 
 function handleDeploy(message, dstBucket, context) {
-  var repo = message.repository;
-  var zipLocation = `${tmpDir}/master.zip`;
-  var unzippedLocation = `${tmpDir}/${repo.name}-master`;
+  const repo = message.repository;
+  const zipLocation = `${tmpDir}/master.zip`;
+  const unzippedLocation = `${tmpDir}/${repo.name}-master`;
 
-  async.waterfall([
+  waterfall([
     function getZippedRepo(next) {
       console.log('Fetching repo %s', repo.name);
-      var zipUrl = `${repo.html_url}/archive/master.zip`;
+      const zipUrl = `${repo.html_url}/archive/master.zip`;
       request(zipUrl)
         .pipe(fs.createWriteStream(zipLocation))
         .on('error', function(err) {
@@ -52,7 +52,7 @@ function handleDeploy(message, dstBucket, context) {
     },
     function upload(next) {
       console.log('Syncing %s to bucket %s', unzippedLocation, dstBucket);
-      var uploader = syncClient.uploadDir({
+      const uploader = syncClient.uploadDir({
         localDir: unzippedLocation,
         deleteRemoved: true,
         s3Params: {
@@ -74,7 +74,7 @@ function handleDeploy(message, dstBucket, context) {
     },
     function publishToSNS(next) {
       console.log('Triggering rebuild via SNS');
-      var sns = new AWS.SNS({
+      const sns = new AWS.SNS({
         region: 'eu-west-1',
       });
 
@@ -102,7 +102,7 @@ function handleDeploy(message, dstBucket, context) {
 }
 
 exports.handler = function(event, context) {
-  var message = JSON.parse(event.Records[0].Sns.Message);
+  const message = JSON.parse(event.Records[0].Sns.Message);
   console.log('Reading options from event:\n', util.inspect(message, {depth: 5}));
 
   handleDeploy(message, dstBucket, context);
