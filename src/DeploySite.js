@@ -116,7 +116,9 @@ function handleDeploy(message, dstBucket, context) {
 }
 
 exports.handler = function(event, context) {
-  const message = JSON.parse(event.Records[0].Sns.Message);
+  const message = (typeof event === 'string')
+    ? JSON.parse(event.Records[0].Sns.Message)
+    : event.Records[0].Sns.Message;
   console.log('Reading options from event:\n', util.inspect(message, {depth: 5}));
 
   handleDeploy(message, dstBucket, context);
