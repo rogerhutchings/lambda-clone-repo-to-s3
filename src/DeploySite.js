@@ -14,6 +14,10 @@ const syncClient = s3.createClient({
     maxAsyncS3: 20,
 });
 
+const snsClient = new AWS.SNS({
+  region: 'eu-west-1',
+});
+
 function handleDeploy(data, destBucket, tmpDir, context) {
   const repo = data.repository;
   const zipLocation = `${tmpDir}/master.zip`;
@@ -84,11 +88,8 @@ function handleDeploy(data, destBucket, tmpDir, context) {
     },
     function publishToSNS(next) {
       console.log('Triggering rebuild via SNS');
-      const sns = new AWS.SNS({
-        region: 'eu-west-1',
-      });
 
-      sns.publish({
+      snsClient.publish({
         Message: 'Site updated from GitHub, start the rebuild!',
         TopicArn: 'arn:aws:sns:eu-west-1:420685058923:BPhORebuildSite'
       }, (err, data) => {
