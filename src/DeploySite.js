@@ -99,7 +99,18 @@ function handleDeploy(data, destBucket, tmpDir, context) {
         }
         console.log('SNS rebuild notification published');
       });
-    }
+    },
+    function rmTempDir(next) {
+      const child = spawn('rm', ['-rf', tmpDir], {});
+      child.on('error', (err) => {
+        console.log('Failed to delete directory: %s', err);
+        next(err);
+      });
+      child.on('close', (code) => {
+        console.log('Deleted directory: %s, %s', tmpDir, code);
+        next(null);
+      });
+    },
   ], function(error) {
       if (error) {
         console.error('Deploy failed due to: ' + error);
