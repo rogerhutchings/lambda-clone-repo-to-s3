@@ -10,15 +10,11 @@ import extract from 'extract-zip'
 import s3 from 's3'
 import uuidV4 from 'uuid/v4';
 
-const dstBucket = 'bpho-src';
-
-const tmpDir = `/tmp/${uuidV4()}`;
-
 const syncClient = s3.createClient({
     maxAsyncS3: 20,
 });
 
-function handleDeploy(data, dstBucket, context) {
+function handleDeploy(data, destBucket, tmpDir, context) {
   const repo = data.repository;
   const zipLocation = `${tmpDir}/master.zip`;
   const unzippedLocation = `${tmpDir}/${repo.name}-master`;
@@ -63,13 +59,13 @@ function handleDeploy(data, dstBucket, context) {
 
     },
     function upload(next) {
-      console.log('Syncing %s to bucket %s', unzippedLocation, dstBucket);
+      console.log('Syncing %s to bucket %s', unzippedLocation, destBucket);
       const uploader = syncClient.uploadDir({
         localDir: unzippedLocation,
         deleteRemoved: true,
         s3Params: {
           ACL: 'private',
-          Bucket: dstBucket,
+          Bucket: destBucket,
           CacheControl: 'max-age=60',
         },
       });
@@ -120,5 +116,7 @@ exports.handler = function(event, context) {
   const data = (typeof event.Records[0].Sns.Message === 'string')
     ? JSON.parse(event.Records[0].Sns.Message)
     : event.Records[0].Sns.Message;
-  handleDeploy(data, dstBucket, context);
+  const tmpDir = '/tmp/' + uuidV4();
+  const destBucket = 'bpho-src';
+  handleDeploy(data, destBucket, tmpDir, context);
 };
