@@ -18,8 +18,8 @@ const syncClient = s3.createClient({
     maxAsyncS3: 20,
 });
 
-function handleDeploy(message, dstBucket, context) {
-  const repo = message.repository;
+function handleDeploy(data, dstBucket, context) {
+  const repo = data.repository;
   const zipLocation = `${tmpDir}/master.zip`;
   const unzippedLocation = `${tmpDir}/${repo.name}-master`;
 
@@ -116,10 +116,9 @@ function handleDeploy(message, dstBucket, context) {
 }
 
 exports.handler = function(event, context) {
-  const message = (typeof event === 'string')
+  console.log('Reading options from event:\n', util.inspect(event.Records[0].Sns.Message, {depth: 5}));
+  const data = (typeof event.Records[0].Sns.Message === 'string')
     ? JSON.parse(event.Records[0].Sns.Message)
     : event.Records[0].Sns.Message;
-  console.log('Reading options from event:\n', util.inspect(message, {depth: 5}));
-
-  handleDeploy(message, dstBucket, context);
+  handleDeploy(data, dstBucket, context);
 };
