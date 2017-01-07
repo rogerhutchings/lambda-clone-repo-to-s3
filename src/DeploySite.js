@@ -68,7 +68,9 @@ function handleDeploy(message, dstBucket, context) {
         localDir: unzippedLocation,
         deleteRemoved: true,
         s3Params: {
+          ACL: 'private',
           Bucket: dstBucket,
+          CacheControl: 'max-age=60',
         },
       });
 
