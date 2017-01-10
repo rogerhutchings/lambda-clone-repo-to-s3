@@ -4,12 +4,21 @@ var execFileSync = require('child_process').execFileSync;
 var CopyWebpackPlugin = require('copy-webpack-plugin');
 var path = require('path');
 
+var packages = execFileSync('npm', ['ls', '--parseable', '--production'])
+  .toString()
+  .split(/\r?\n/)
+  .filter(package => package.indexOf('node_modules') > -1)
+  .map(package => ({
+    from: package,
+    to: package.substr(package.indexOf('node_modules'))
+  }));
+
 module.exports = {
-  entry: path.join(__dirname, 'src/index.js'),
+  entry: './src/index.js',
   target: 'node',
   output: {
     filename: 'index.js',
-    path: path.join(__dirname, 'build'),
+    path: path.join(__dirname, 'dist'),
     library: "[name]",
     libraryTarget: "commonjs2",
   },
@@ -30,5 +39,8 @@ module.exports = {
   },
   noParse: [
     /aws\-sdk/,
+  ],
+  plugins: [
+    new CopyWebpackPlugin(packages),
   ],
 }

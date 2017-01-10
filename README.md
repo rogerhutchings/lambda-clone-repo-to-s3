@@ -1,18 +1,35 @@
-# bpho-lambda-compile-site
+# lambda-clone-repo-to-s3
 
-Builds and deploys a Hugo-generated site to an S3 bucket.
+Like it says on the tin - clones a GitHub repo down to an S3 bucket. It uses the GitHub AWS SNS integration to kick off a new clone on any change to the repo - CHECK IT'S JUST MASTER! - and optionally triggers an SNS notification on completion.
 
-Based on https://github.com/ryansb/hugo-lambda, and http://bezdelev.com/post/hugo-aws-lambda-static-website/
+## Configuration
 
-## Requirements
+### Local
 
-- AWS CLI
-- A `bpho` profile in your `~/.aws` dir
+This project uses [node-lambda](https://github.com/motdotla/node-lambda) to provide event testing and deployment to AWS, which uses an `.env` file to store AWS publishing details.
 
-## Deploying
+### Lambda
 
-- Run `npm run deploy` to upload a zipped version of the lambda to S3, and update the `BPhORunHugo` function
+The lambda offers the following configuration options, which can be defined in the `deploy.env` file:
 
-## Notes
+- `DEST_BUCKET` - sets the target bucket for the repo to be cloned to, e.g. `bucket-name`
+- `SNS_TOPIC_ARN` - (optional) sets the topic that an SNS notification will be published to
+- `SNS_TOPIC_REGION` - (optional) the region for the `SNS_TOPIC_ARN`
 
-This uses webpack to compile and build, including the copying of dependencies into the zip bundle.
+Note that the lambda ARN will also need access to the S3 destination bucket.
+
+## Running
+
+Use `npm run <command>` to interact with the project:
+
+### `start`
+
+Compiles and runs the project locally, passing in the contents of `event.json` as the event.
+
+### `deploy`
+
+Compiles, zips and publishes the lambda to AWS using the settings in `.env`
+
+### `package`
+
+Compiles and zips the lambda to the `/package` directory.

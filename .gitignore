@@ -1,2 +1,4 @@
 dist/
-*.zip
+build/
+package/
+*.env
