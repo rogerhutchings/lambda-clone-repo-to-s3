@@ -15,21 +15,29 @@ exports.handler = function(event, context) {
     context.done();
   }
 
-  const messageFromSns = event.Records[0].Sns.Message;
-  console.log('Reading options from event:\n', util.inspect(messageFromSns, { depth: 5 }));
-  const data = (typeof messageFromSns === 'string')
-    ? JSON.parse(messageFromSns)
-    : messageFromSns;
+  const rawMessage = event.Records[0].Sns.Message;
+  const message = (typeof rawMessage === 'string')
+    ? JSON.parse(rawMessage)
+    : rawMessage;
+  console.log('Reading options from event:\n', util.inspect(message, { depth: 5 }));
   
   const params = {
     destBucket: process.env.DEST_BUCKET,
-    message: messageFromSns,
+    message,
     snsTopicArn: process.env.SNS_TOPIC_ARN,
     snsTopicRegion: process.env.SNS_TOPIC_REGION,
     tmpDir: '/tmp/' + uuidV4(),
   };
 
-  handleCloneRepoToS3(params, context);
+  // Check we're on the master branch for the repo by matching the last bit of 
+  // ref/heads/BRANCH_NAME against the repo master_branch name
+  if (message.ref.substr(message.ref.lastIndexOf('/') + 1) !== message.repository.master_branch) {
+    console.log('Lambda should only run on changes to the master branch');
+    console.log('Exiting...')
+    context.done();
+  } else {
+    handleCloneRepoToS3(params, context);
+  }
 }
 
 // Main 

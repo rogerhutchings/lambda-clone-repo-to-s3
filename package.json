@@ -1,7 +1,7 @@
 {
-  "name": "2lambda-clone-repo-to-s3",
+  "name": "lambda-clone-repo-to-s3",
   "version": "0.0.1",
-  "description": "",
+  "description": "Lambda to clone a GitHub repo to an S3 bucket via the SNS integration",
   "main": "index.js",
   "scripts": {
     "_webpack": "webpack --config webpack.config.js",
