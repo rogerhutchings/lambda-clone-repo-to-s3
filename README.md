@@ -22,6 +22,10 @@ Note that the lambda ARN will also need access to the S3 destination bucket.
 
 Use `npm run <command>` to interact with the project:
 
+### `setup`
+
+Generates a set of default config files.
+
 ### `start`
 
 Compiles and runs the project locally, passing in the contents of `event.json` as the event.
