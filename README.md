@@ -1,6 +1,6 @@
 # lambda-clone-repo-to-s3
 
-Like it says on the tin - clones a GitHub repo down to an S3 bucket. It uses the GitHub AWS SNS integration to kick off a new clone on any change to the repo - CHECK IT'S JUST MASTER! - and optionally triggers an SNS notification on completion.
+Like it says on the tin - clones a GitHub repo down to an S3 bucket. It uses the GitHub AWS SNS integration to kick off a new clone on any change to the repo's master branch, and optionally triggers an SNS notification on completion.
 
 ## Configuration
 
