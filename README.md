@@ -6,17 +6,25 @@ Like it says on the tin - clones a GitHub repo down to an S3 bucket. It uses the
 
 ### Local
 
-This project uses [node-lambda](https://github.com/motdotla/node-lambda) to provide event testing and deployment to AWS, which uses an `.env` file to store AWS publishing details.
+This project uses [node-lambda](https://github.com/motdotla/node-lambda) to provide event testing and deployment to AWS, which uses an `.env` file to store AWS publishing config.
 
 ### Lambda
 
-The lambda offers the following configuration options, which can be defined in the `deploy.env` file:
+In order to keep configuration separate from code, and allow the lambda to be used with multiple repos, configuration for each repo is kept in an external YAML file on S3, named after the repo it corresponds to. 
 
-- `DEST_BUCKET` - sets the target bucket for the repo to be cloned to, e.g. `bucket-name`
-- `SNS_TOPIC_ARN` - (optional) sets the topic that an SNS notification will be published to
-- `SNS_TOPIC_REGION` - (optional) the region for the `SNS_TOPIC_ARN`
+To set the location where the lambda should look for its configs, you'll need to set the `CONFIG_FOLDER` environment variable, which node-lambda enables in `deploy.env`:
 
-Note that the lambda ARN will also need access to the S3 destination bucket.
+```ini
+CONFIG_FOLDER=s3://config-bucket/folder/
+```
+
+Each `<repo>.yaml` file which can contain the following settings:
+
+- `destBucket` - sets the target bucket for the repo to be cloned to, e.g. `bucket-name`
+- `snsTopicArn` - (optional) sets the topic that an SNS notification will be published to
+- `snsTopicRegion` - (optional) the region for the `snsTopicArn`
+
+Note that the lambda ARN will need access to the S3 config and destination bucket.
 
 ## Running
 

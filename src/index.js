@@ -10,11 +10,6 @@ import util from 'util'
 import uuidV4 from 'uuid/v4';
 
 exports.handler = function(event, context) {
-  if (!process.env.DEST_BUCKET) {
-    console.error('Destination bucket must be set by the DEST_BUCKET env variable');
-    console.error('Exiting...')
-    context.done();
-  }
 
   const rawMessage = event.Records[0].Sns.Message;
   const message = (typeof rawMessage === 'string')
@@ -37,9 +32,10 @@ exports.handler = function(event, context) {
 
   // Attempt to load the config file for this repo from the specified config bucket
   const [configUrl, configBucket, configFolder] = process.env.CONFIG_FOLDER.match(/^s3:\/\/([^\/]+)\/(.*)/);
+  console.log('Attempting to load config for %s from %s', params.repo.name, `${configUrl}${params.repo.name}.yaml`);
   new AWS.S3().getObject({ 
     Bucket: configBucket, 
-    Key: `${configFolder}${params.repo.name}.yaml` 
+    Key: `${configFolder}${params.repo.name}.yaml`,
   }, (err, data) => {
     if (err) {
       console.log('Error finding config for this repo: %s', err.message);
@@ -47,12 +43,8 @@ exports.handler = function(event, context) {
       context.done();
       return;
     }
-
-    try {
-      params = Object.assign({}, params, yaml.safeLoad(data.Body.toString()));
-    } catch (e) {
-      console.log(e);
-    }
+    console.log('Config loaded');
+    params = Object.assign(params, yaml.safeLoad(data.Body.toString()));
     handleCloneRepoToS3(params, context);
   });
 }
