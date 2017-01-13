@@ -22,7 +22,7 @@ exports.handler = function(event, context) {
     : rawMessage;
   console.log('Reading options from event:\n', util.inspect(message, { depth: 5 }));
   
-  const params = {
+  let params = {
     repo: message.repository,
     tmpDir: '/tmp/' + uuidV4(),
   };
