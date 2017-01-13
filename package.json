@@ -6,11 +6,10 @@
   "scripts": {
     "_webpack": "webpack --config webpack.config.js",
     "_webpack_deploy": "webpack --config webpack.config.deploy.js",
-
     "deploy": "rm -rf dist && npm run _webpack_deploy && node-lambda deploy -D dist -A deploy -f deploy.env",
     "package": "rm -rf dist && npm run _webpack_deploy && node-lambda package -D dist -A package -f deploy.env",
     "setup": "node-lambda setup",
-    "start": "rm -rf build && npm run _webpack && node-lambda run -H build/index.handler"
+    "start": "rm -rf build && npm run _webpack && node-lambda run -H build/index.handler -f deploy.env"
   },
   "author": "Roger Hutchings <roger@hutchin.gs> (https://www.rogerhutchin.gs/)",
   "license": "Apache-2.0",
@@ -26,6 +25,7 @@
   "dependencies": {
     "async": "^2.1.4",
     "extract-zip": "^1.6.0",
+    "js-yaml": "^3.7.0",
     "request": "^2.79.0",
     "s3": "^4.4.0",
     "uuid": "^3.0.1"

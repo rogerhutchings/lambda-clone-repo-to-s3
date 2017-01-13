@@ -3,6 +3,7 @@ import AWS from 'aws-sdk'
 import { spawn } from 'child_process'
 import extract from 'extract-zip'
 import fs from 'fs'
+import yaml from 'js-yaml';
 import request from 'request'
 import s3 from 's3'
 import util from 'util'
@@ -22,28 +23,43 @@ exports.handler = function(event, context) {
   console.log('Reading options from event:\n', util.inspect(message, { depth: 5 }));
   
   const params = {
-    destBucket: process.env.DEST_BUCKET,
-    message,
-    snsTopicArn: process.env.SNS_TOPIC_ARN,
-    snsTopicRegion: process.env.SNS_TOPIC_REGION,
+    repo: message.repository,
     tmpDir: '/tmp/' + uuidV4(),
   };
 
   // Check we're on the master branch for the repo by matching the last bit of 
   // ref/heads/BRANCH_NAME against the repo master_branch name
-  if (message.ref.substr(message.ref.lastIndexOf('/') + 1) !== message.repository.master_branch) {
+  if (message.ref.substr(message.ref.lastIndexOf('/') + 1) !== params.repo.master_branch) {
     console.log('Lambda should only run on changes to the master branch');
     console.log('Exiting...')
     context.done();
-  } else {
-    handleCloneRepoToS3(params, context);
   }
+
+  // Attempt to load the config file for this repo from the specified config bucket
+  const [configUrl, configBucket, configFolder] = process.env.CONFIG_FOLDER.match(/^s3:\/\/([^\/]+)\/(.*)/);
+  new AWS.S3().getObject({ 
+    Bucket: configBucket, 
+    Key: `${configFolder}${params.repo.name}.yaml` 
+  }, (err, data) => {
+    if (err) {
+      console.log('Error finding config for this repo: %s', err.message);
+      console.log('Exiting...')
+      context.done();
+      return;
+    }
+
+    try {
+      params = Object.assign({}, params, yaml.safeLoad(data.Body.toString()));
+    } catch (e) {
+      console.log(e);
+    }
+    handleCloneRepoToS3(params, context);
+  });
 }
 
 // Main 
 const handleCloneRepoToS3 = (params, context) => {
-  const { destBucket, snsTopicArn, snsTopicRegion, tmpDir } = params;
-  const repo = params.message.repository;
+  const { destBucket, repo, snsTopicArn, snsTopicRegion, tmpDir } = params;
   const zipLocation = `${tmpDir}/master.zip`;
   const unzippedLocation = `${tmpDir}/${repo.name}-master`;
 
