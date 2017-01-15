@@ -1,4 +1,4 @@
-import waterfall from 'async/waterfall'
+import series from 'async/series'
 import AWS from 'aws-sdk'
 import { spawn } from 'child_process'
 import extract from 'extract-zip'
@@ -55,7 +55,7 @@ const handleCloneRepoToS3 = (params, context) => {
   const zipLocation = `${tmpDir}/master.zip`;
   const unzippedLocation = `${tmpDir}/${repo.name}-master`;
 
-  waterfall([
+  series([
     function makeTempDir(next) {
       const child = spawn('mkdir', ['-p', tmpDir], {});
       child.on('error', (error) => {
@@ -133,7 +133,7 @@ const handleCloneRepoToS3 = (params, context) => {
     function publishToSNS(next) {
       if (!snsTopicArn) {
         console.log('No SNS config set, skipping publish');
-        next(null);
+        return next(null);
       }
 
       console.log('Publishing notification to SNS');
@@ -141,15 +141,19 @@ const handleCloneRepoToS3 = (params, context) => {
       
       const snsClient = new AWS.SNS({ region: snsTopicRegion });
       snsClient.publish({
-        Message: 'Site updated from GitHub, start the rebuild!',
+        Message: JSON.stringify({
+          'event': 'gitHubUpdate',
+          'project': repo.name,
+        }),
         TopicArn: snsTopicArn,
       }, (error, data) => {
         if (error) {
           console.error(error.stack);
           next(error);
+        } else {
+          console.log('SNS rebuild notification published');
+          next(null);
         }
-        console.log('SNS rebuild notification published');
-        next(null);
       });
     },
   ], function(error) {
