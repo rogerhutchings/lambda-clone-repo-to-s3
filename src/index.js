@@ -9,8 +9,16 @@ import s3 from 's3'
 import util from 'util'
 import uuidV4 from 'uuid/v4';
 
-exports.handler = function(event, context) {
+const createErrorHandler = (callback) => (message, errorObj = false) => {
+  console.error(message);
+  if (errorObject) {
+    console.log(util.inspect(errorObject, { depth: 5 }));
+  }
+  callback(message);
+};
 
+exports.handler = function(event, context, callback) {
+  const errorHandler = createErrorHandler(callback);
   const rawMessage = event.Records[0].Sns.Message;
   const message = (typeof rawMessage === 'string')
     ? JSON.parse(rawMessage)
@@ -19,15 +27,12 @@ exports.handler = function(event, context) {
   
   let params = {
     repo: message.repository,
-    tmpDir: '/tmp/' + uuidV4(),
   };
 
   // Check we're on the master branch for the repo by matching the last bit of 
   // ref/heads/BRANCH_NAME against the repo master_branch name
   if (message.ref.substr(message.ref.lastIndexOf('/') + 1) !== params.repo.master_branch) {
-    console.log('Lambda should only run on changes to the master branch');
-    console.log('Exiting...')
-    context.done();
+    errorHandler('Lambda should only run on changes to the master branch');
   }
 
   // Attempt to load the config file for this repo from the specified config bucket
@@ -38,60 +43,61 @@ exports.handler = function(event, context) {
     Key: `${configFolder}${params.repo.name}.yaml`,
   }, (err, data) => {
     if (err) {
-      console.log('Error finding config for this repo: %s', err.message);
-      console.log('Exiting...')
-      context.done();
-      return;
+      errorHandler('Error finding config for this repo', err);
+    } else {
+      console.log('Config loaded');
+      params = Object.assign(params, yaml.safeLoad(data.Body.toString()));
+      handleCloneRepoToS3(params, callback, errorHandler);
     }
-    console.log('Config loaded');
-    params = Object.assign(params, yaml.safeLoad(data.Body.toString()));
-    handleCloneRepoToS3(params, context);
   });
 }
 
 // Main 
-const handleCloneRepoToS3 = (params, context) => {
-  const { destBucket, repo, snsTopicArn, snsTopicRegion, tmpDir } = params;
+const handleCloneRepoToS3 = (params, callback, errorHandler) => {
+  const { destBucket, repo, snsTopicArn, snsTopicRegion } = params;
+  const tmpDir = '/tmp/' + uuidV4();
   const zipLocation = `${tmpDir}/master.zip`;
   const unzippedLocation = `${tmpDir}/${repo.name}-master`;
 
   series([
     function makeTempDir(next) {
-      const child = spawn('mkdir', ['-p', tmpDir], {});
-      child.on('error', (error) => {
-        console.log('Failed to create directory: %s', error);
-        next(error);
-      });
-      child.on('close', (code) => {
-        console.log('Created directory: %s, %s', tmpDir, code);
-        next(null);
-      });
+      spawn('mkdir', ['-p', tmpDir], {})
+        .on('error', (err) => next({ 
+          message: 'Error creating temp directory', 
+          errorObj: err 
+        }))
+        .on('close', () => {
+          console.log('Created directory: %s', tmpDir);
+          next();
+        });
     },
     function getZippedRepo(next) {
       console.log('Fetching repo %s', repo.name);
       const zipUrl = `${repo.html_url}/archive/master.zip`;
       request(zipUrl)
         .pipe(fs.createWriteStream(zipLocation))
-        .on('error', function(error) {
-            console.error('Error downloading repo zip: %s', error);
-            next(error);
-        })
-        .on('close', function () {
+        .on('error', (err) => next({ 
+          message: 'Error unzipping repo', 
+          errorObj: err,
+        }))
+        .on('close', () => {
           console.log('Finished downloading %s', zipUrl);
           next(null);
         });
     },
     function unzipRepo(next) {
       console.log('Unzipping %s to %s', zipLocation, unzippedLocation);
-      extract(zipLocation, { dir: tmpDir }, (error) => {
-        if (error) {
-          console.error('Error unzipping repo: %s', error);
-          next(error);
+      extract(zipLocation, { dir: tmpDir }, (err) => {
+        if (err) {
+          next({ 
+            message: 'Error unzipping repo', 
+            errorObj: err,
+          });
+        } else {
+          console.log('Finished unzipping');
+          next();
         }
-        console.log('Finished unzipping');
-        next(null);
       });
-
     },
     function upload(next) {
       console.log('Syncing %s to bucket %s', unzippedLocation, destBucket);
@@ -105,35 +111,36 @@ const handleCloneRepoToS3 = (params, context) => {
         },
       });
 
-      uploader.on('fileUploadEnd', (localFilePath) => {
-        console.info('Uploaded %s', localFilePath);
-      });
+      uploader.on('fileUploadEnd', (localFilePath) => 
+        console.info('Uploaded %s', localFilePath));
 
-      uploader.on('error', (error) => {
-        console.error('Error syncing to S3: ', error.stack);
-        next(error);
+      uploader.on('error', (err) => {
+        next({ 
+          message: 'Error syncing to S3', 
+          errorObj: err,
+        });
       });
 
       uploader.on('end', () => {
         console.log('Finished syncing to S3');
-        next(null);
+        next();
       });
     },
     function deleteTempDir(next) {
-      const child = spawn('rm', ['-rf', tmpDir], {});
-      child.on('error', (error) => {
-        console.log('Error deleting directory: %s', error);
-        next(error);
-      });
-      child.on('close', (code) => {
-        console.log('Deleted directory: %s, %s', tmpDir, code);
-        next(null);
-      });
+      spawn('rm', ['-rf', tmpDir], {})
+        .on('error', (error) => next({ 
+          message: 'Error deleting temp directory', 
+          errorObj: err,
+        }))
+        .on('close', () => {
+          console.log('Deleted directory: %s', tmpDir);
+          next();
+        });
     },
     function publishToSNS(next) {
       if (!snsTopicArn) {
         console.log('No SNS config set, skipping publish');
-        return next(null);
+        return next();
       }
 
       console.log('Publishing notification to SNS');
@@ -146,23 +153,23 @@ const handleCloneRepoToS3 = (params, context) => {
           'project': repo.name,
         }),
         TopicArn: snsTopicArn,
-      }, (error, data) => {
-        if (error) {
-          console.error(error.stack);
-          next(error);
+      }, (err, data) => {
+        if (err) {
+          next({ 
+            message: 'Error publishing to SNS', 
+            errorObj: err,
+          });
         } else {
           console.log('SNS rebuild notification published');
-          next(null);
+          next();
         }
       });
     },
-  ], function(error) {
-      if (error) {
-        console.error('Error running clone repo to S3: %s', error);
-      } else {
-        console.log('Clone repo to S3 successfully completed');
-      }
-
-      context.done();
+  ], ({ message, errorObj }) => {
+    if (message) {
+      errorHandler(message, errorObj);
+    } else {
+      callback(null, 'Clone repo to S3 successfully completed');
+    }
   });
 };
