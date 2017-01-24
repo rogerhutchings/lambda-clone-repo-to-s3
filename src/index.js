@@ -1,12 +1,12 @@
-import series from 'async/series'
-import AWS from 'aws-sdk'
-import { spawn } from 'child_process'
-import extract from 'extract-zip'
-import fs from 'fs'
-import yaml from 'js-yaml';
-import request from 'request'
-import s3 from 's3'
-import util from 'util'
+import series from 'async/series';
+import AWS from 'aws-sdk';
+import { spawn } from 'child_process';
+import extract from 'extract-zip';
+import fs from 'fs';
+import yaml from 'js-yaml';;
+import request from 'request';
+import s3 from 's3';
+import util from 'util';
 import uuidV4 from 'uuid/v4';
 
 const createErrorHandler = (callback) => (message, errorObj = false) => {
@@ -82,7 +82,7 @@ const handleCloneRepoToS3 = (params, callback, errorHandler) => {
         }))
         .on('close', () => {
           console.log('Finished downloading %s', zipUrl);
-          next(null);
+          next();
         });
     },
     function unzipRepo(next) {
@@ -114,12 +114,10 @@ const handleCloneRepoToS3 = (params, callback, errorHandler) => {
       uploader.on('fileUploadEnd', (localFilePath) => 
         console.info('Uploaded %s', localFilePath));
 
-      uploader.on('error', (err) => {
-        next({ 
-          message: 'Error syncing to S3', 
-          errorObj: err,
-        });
-      });
+      uploader.on('error', (err) => next({ 
+        message: 'Error syncing to S3', 
+        errorObj: err,
+      }));
 
       uploader.on('end', () => {
         console.log('Finished syncing to S3');
@@ -140,34 +138,33 @@ const handleCloneRepoToS3 = (params, callback, errorHandler) => {
     function publishToSNS(next) {
       if (!snsTopicArn) {
         console.log('No SNS config set, skipping publish');
-        return next();
+        next();
+      } else {
+        console.log('Publishing notification to SNS');
+        console.log('Using topic ARN %s', snsTopicArn);
+        const snsClient = new AWS.SNS({ region: snsTopicRegion });
+        snsClient.publish({
+          Message: JSON.stringify({
+            event: 'gitHubUpdate',
+            project: repo.name,
+          }),
+          TopicArn: snsTopicArn,
+        }, (err, data) => {
+          if (err) {
+            next({ 
+              message: 'Error publishing to SNS', 
+              errorObj: err,
+            });
+          } else {
+            console.log('SNS rebuild notification published');
+            next();
+          }
+        });
       }
-
-      console.log('Publishing notification to SNS');
-      console.log('Using topic ARN %s', snsTopicArn);
-      
-      const snsClient = new AWS.SNS({ region: snsTopicRegion });
-      snsClient.publish({
-        Message: JSON.stringify({
-          'event': 'gitHubUpdate',
-          'project': repo.name,
-        }),
-        TopicArn: snsTopicArn,
-      }, (err, data) => {
-        if (err) {
-          next({ 
-            message: 'Error publishing to SNS', 
-            errorObj: err,
-          });
-        } else {
-          console.log('SNS rebuild notification published');
-          next();
-        }
-      });
     },
-  ], ({ message, errorObj }) => {
-    if (message) {
-      errorHandler(message, errorObj);
+  ], (err) => {
+    if (err) {
+      errorHandler(err.message, err.errorObj);
     } else {
       callback(null, 'Clone repo to S3 successfully completed');
     }
