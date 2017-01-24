@@ -166,7 +166,7 @@ const handleCloneRepoToS3 = (params, callback, errorHandler) => {
     if (err) {
       errorHandler(err.message, err.errorObj);
     } else {
-      callback(null, 'Clone repo to S3 successfully completed');
+      callback(null, `Clone repo ${repo.name} to S3 bucket ${destBucket} successfully completed`);
     }
   });
 };
